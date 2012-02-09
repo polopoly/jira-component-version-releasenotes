@@ -14,7 +14,7 @@
         <url>http://www.atex.com/</url>
     </organization>
 
-    <name>component-version-releasenotes</name>
+    <name>Component and Version based Release Notes Generator</name>
     <description>This is Jira Plugin to able to generate release notes by Version and Component</description>
     <packaging>atlassian-plugin</packaging>
 
