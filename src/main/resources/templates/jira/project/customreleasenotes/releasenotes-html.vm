@@ -1,0 +1,50 @@
+##Text is escaped twice so that the characters generated in the text area display properly escaped (JRA-12184)
+###macro (doubleEncode $html)
+##        $textUtils.htmlEncode($textUtils.htmlEncode($html))
+###end
+<title>$textUtils.htmlEncode($action.getText('release.notes.html.title', $component, $version))</title>
+<body>
+<table>
+<tr>
+<td>
+<a href="$!requestContext.baseUrl/secure/ConfigureReleaseNoteByComponent.jspa?projectId=${versionObj.projectObject.id}&version=${versionObj.id}&component=${componentId}">$action.getText('releasenotes.configure')</a>
+#foreach ($issueType in $issueTypes)
+#if($issueType.issues.size() > 0)
+<h2>$textUtils.htmlEncode($issueType.name)</h2>
+<ul>
+#foreach ($issue in $issueType.issues)
+<li>[<a href='$requestContext.canonicalBaseUrl/browse/$issue.key'>$issue.key</a>] - $textUtils.htmlEncode($issue.summary)</li>
+#end
+</ul>
+#end
+#end
+</td>
+</tr>
+
+<tr>
+<td>
+
+<hr width="100%">
+
+<a name="editarea"><h2>$action.getText('release.notes.edit.copy')</h2></a>
+<p>$action.getText('release.notes.description')<br></p>
+
+<textarea rows="40" cols="120" id="editcopy">
+
+#doubleEncode($action.getText('release.notes.heading', $project, $version))
+#foreach ($issueType in $issueTypes)
+    #if($issueType.issues.size() > 0)
+
+<h2>#doubleEncode($issueType.name)</h2>
+<ul>
+#foreach ($issue in $issueType.issues)
+<li>[<a href='$!requestContext.canonicalBaseUrl/browse/$issue.key'>$issue.key</a>] - #doubleEncode($issue.summary)</li>
+#end
+</ul>
+#end
+#end
+</textarea>
+</td>
+</tr>
+</table>
+</body>

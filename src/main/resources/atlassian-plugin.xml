@@ -1,0 +1,24 @@
+<atlassian-plugin key="${project.groupId}.${project.artifactId}" name="${project.name}" plugins-version="2">
+    <plugin-info>
+        <description>${project.description}</description>
+        <version>${project.version}</version>
+        <vendor name="${project.organization.name}" url="${project.organization.url}" />
+    </plugin-info>
+    
+	<webwork1 key="qquserissue" name="Quick Create User Issue" class="java.lang.Object">
+	    <actions>
+	        <action name="com.atex.jira.plugin.action.ReleaseNoteByComponentAction" alias="ReleaseNoteByComponent">
+	            <view name="success">/secure/views/project/custom-releasenote.jsp</view>
+		        <view name="error">/secure/views/project/custom-releasenoteconfigure.jsp</view>
+		        <view name="input">/secure/views/project/custom-releasenoteconfigure.jsp</view>
+		        <command name="configure" alias="ConfigureReleaseNoteByComponent">
+		            <view name="success">/secure/views/project/custom-releasenoteconfigure.jsp</view>
+		            <view name="error">/secure/views/project/custom-releasenoteconfigureerror.jsp</view>
+		        </command>
+	        </action>
+	    </actions>
+	</webwork1>
+    
+    <component key="releaseNoteManager" name="Release Note Manager" class="com.atlassian.jira.project.util.ReleaseNoteManager"/>
+    <component key="customReleaseNoteManager" name="Release Note Manager" class="com.atex.jira.plugin.util.CustomReleaseNoteManager"/>
+</atlassian-plugin>
