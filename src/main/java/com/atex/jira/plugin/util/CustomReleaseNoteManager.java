@@ -1,7 +1,5 @@
 package com.atex.jira.plugin.util;
 
-import static com.atlassian.jira.util.dbc.Assertions.notNull;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -53,10 +51,9 @@ public class CustomReleaseNoteManager {
     private final SearchProvider searchProvider;
     private final CustomFieldManager customFieldManager;
 
-    public CustomReleaseNoteManager(final ApplicationProperties applicationProperties, final VelocityManager velocityManager,
-            final ConstantsManager constantsManager, final SearchProvider searchProvider,
-            final CustomFieldManager customFieldManager)
-    {
+    public CustomReleaseNoteManager(final ApplicationProperties applicationProperties,
+            final VelocityManager velocityManager, final ConstantsManager constantsManager,
+            final SearchProvider searchProvider, final CustomFieldManager customFieldManager) {
         this.applicationProperties = applicationProperties;
         this.velocityManager = velocityManager;
         this.constantsManager = constantsManager;
@@ -64,165 +61,151 @@ public class CustomReleaseNoteManager {
         this.customFieldManager = customFieldManager;
     }
 
-    public Map getStyles()
-    {
-        if (styles == null)
-        {
+    public Map getStyles() {
+        if (styles == null) {
             loadReleaseNoteTemplates();
         }
         return styles;
     }
 
-    private List splitString(String strings)
-    {
-        if (strings == null)
-        {
+    private List splitString(String strings) {
+        if (strings == null) {
             return Collections.EMPTY_LIST;
         }
 
         List stringList = new ArrayList();
         StringTokenizer tokenizer = new StringTokenizer(strings, ",");
-        while (tokenizer.hasMoreTokens())
-        {
+        while (tokenizer.hasMoreTokens()) {
             stringList.add(tokenizer.nextToken().trim());
         }
         return stringList;
     }
 
-    private void loadReleaseNoteTemplates()
-    {
+    private void loadReleaseNoteTemplates() {
         List allReleaseNoteNames = splitString(applicationProperties.getDefaultBackedString(RELEASE_NOTE_NAME));
         List allReleaseNoteTemplates = splitString(applicationProperties.getDefaultBackedString(RELEASE_NOTE_TEMPLATE));
-        if (allReleaseNoteTemplates.size() != allReleaseNoteNames.size())
-        {
-            throw new RuntimeException("Error loading release notes; differing numbers of names and templates specified in properties file.");
+        if (allReleaseNoteTemplates.size() != allReleaseNoteNames.size()) {
+            throw new RuntimeException(
+                    "Error loading release notes; differing numbers of names and templates specified in properties file.");
         }
 
         styles = new HashMap(allReleaseNoteTemplates.size());
 
-        for (int i = 0; i < allReleaseNoteNames.size(); i++)
-        {
+        for (int i = 0; i < allReleaseNoteNames.size(); i++) {
             styles.put(allReleaseNoteNames.get(i), allReleaseNoteTemplates.get(i));
         }
     }
 
     /**
-     * Return a releasenote for this version, using the specified releaseNoteStyleName.  The issues returned will be
-     * the issues that the user has permission to see.
-     *
-     * @throws IllegalArgumentException if there is no matching template for this releaseNoteStyleName
+     * Return a releasenote for this version, using the specified releaseNoteStyleName. The issues returned will be the
+     * issues that the user has permission to see.
+     * 
+     * @param projectId
+     *            TODO
+     * 
+     * @throws IllegalArgumentException
+     *             if there is no matching template for this releaseNoteStyleName
      */
-    public String getReleaseNote(Action action, String releaseNoteStyleName, Version version, User user, GenericValue project, String component, ProjectComponent projectComponent) throws IllegalArgumentException
-    {
-        try
-        {
+    public String getReleaseNote(Action action, String releaseNoteStyleName, Version version, User user,
+            GenericValue project, String component, ProjectComponent projectComponent, String projectId)
+            throws IllegalArgumentException {
+        try {
             String templateName = (String) getStyles().get(releaseNoteStyleName);
 
             // use Default
-            if (templateName == null)
-            {
+            if (templateName == null) {
                 final String defaultType = applicationProperties.getDefaultBackedString(RELEASE_NOTE_DEFAULT);
-                if (StringUtils.isNotBlank(defaultType))
-                {
+                if (StringUtils.isNotBlank(defaultType)) {
                     templateName = (String) getStyles().get(defaultType);
                 }
             }
-            
+
             // use first
-            if (templateName == null)
-            {
+            if (templateName == null) {
                 templateName = getFirstStyle();
             }
 
-            if (templateName == null)
-            {
+            if (templateName == null) {
                 log.error("No styles available for release notes");
                 throw new IllegalArgumentException("No styles available for release notes");
             }
 
-            Map templateVariables = getTemplateVariables(action, version, component, user, project, projectComponent);
+            Map templateVariables = getTemplateVariables(action, version, component, user, project, projectComponent,
+                    projectId);
 
             return velocityManager.getBody(TEMPLATES_DIR, templateName, templateVariables);
-        }
-        catch (VelocityException e)
-        {
+        } catch (VelocityException e) {
             log.error("Exception occurred while attempting to get velocity body for release note template.", e);
             return null;
         }
     }
 
-    private String getFirstStyle()
-    {
+    private String getFirstStyle() {
         final Collection values = getStyles().values();
-        if (values != null)
-        {
+        if (values != null) {
             final Iterator iterator = values.iterator();
-            if (iterator.hasNext())
-            {
+            if (iterator.hasNext()) {
                 return (String) iterator.next();
             }
         }
         return null;
     }
 
-    private Map getTemplateVariables(Action action, Version version, String component, User user, GenericValue project, ProjectComponent projectComponent)
-    {
+    private Map getTemplateVariables(Action action, Version version, String component, User user, GenericValue project,
+            ProjectComponent projectComponent, String projectId) {
         List issueTypes = new ArrayList();
-        for (IssueType  issueType : constantsManager.getAllIssueTypeObjects())
-        {
-            issueTypes.add(new IssuesByType(issueType, user, version.getLong("id"), component));
+        for (IssueType issueType : constantsManager.getAllIssueTypeObjects()) {
+            issueTypes
+                    .add(new IssuesByType(issueType, user, version != null ? version.getLong("id") : null, component));
         }
         TextUtils textUtils = new TextUtils();
-        Map templateVarMap = EasyMap.build("action", action,
-                "req", ActionContext.getRequest(),
-                "issueTypes", issueTypes,
-                "appProps", applicationProperties,
-                "version", version.getName(),
-                "versionObj", version,
-                "project", project.getString("name"),
-                "component", projectComponent.getDescription(),
-                "componentId", component,
-                "textUtils", textUtils,
-                "requestContext", new DefaultVelocityRequestContextFactory(applicationProperties).getJiraVelocityRequestContext());
+        Map templateVarMap = EasyMap.build("action", action, "req", ActionContext.getRequest(), "issueTypes",
+                issueTypes, "appProps", applicationProperties, "project", project.getString("name"), "component",
+                projectComponent.getDescription(), "componentId", component, "projectId", projectId, "textUtils",
+                textUtils, "requestContext",
+                new DefaultVelocityRequestContextFactory(applicationProperties).getJiraVelocityRequestContext());
         templateVarMap.put("constantsManager", constantsManager);
         templateVarMap.put("customFieldManager", customFieldManager);
+        if (version != null) {
+            templateVarMap.put("version", version.getName());
+            templateVarMap.put("versionObj", version);
+        }
         return templateVarMap;
     }
 
-    public class IssuesByType
-    {
+    public class IssuesByType {
         private final IssueType issueType;
         private final User user;
         private final Long fixForVersion;
         private final String component;
         private Collection issues;
 
-        private IssuesByType(IssueType issueType, User user, @NotNull Long fixForVersion, @NotNull String component)
-        {
+        private IssuesByType(IssueType issueType, User user, @NotNull Long fixForVersion, @NotNull String component) {
             this.issueType = issueType;
             this.user = user;
-            this.fixForVersion = notNull("fixForVersion", fixForVersion);
+            this.fixForVersion = fixForVersion;
             this.component = component;
         }
 
-        public String getName()
-        {
+        public String getName() {
             return issueType.getNameTranslation();
         }
 
-        public Collection getIssues()
-        {
-            if (issues == null)
-            {
+        public Collection getIssues() {
+            if (issues == null) {
                 final JqlQueryBuilder queryBuilder = JqlQueryBuilder.newBuilder();
-                queryBuilder.where().fixVersion(fixForVersion).and().issueType(issueType.getId()).and().component(component);
-                queryBuilder.orderBy().issueKey(SortOrder.ASC);
-                try
-                {
-                    issues = searchProvider.search(queryBuilder.buildQuery(), user, PagerFilter.getUnlimitedFilter()).getIssues();
+
+                if (fixForVersion != null) {
+                    queryBuilder.where().fixVersion(fixForVersion).and().issueType(issueType.getId()).and()
+                            .component(component);
+                } else {
+                    queryBuilder.where().issueType(issueType.getId()).and().component(component);
                 }
-                catch (SearchException e)
-                {
+                queryBuilder.orderBy().issueKey(SortOrder.ASC);
+                try {
+                    issues = searchProvider.search(queryBuilder.buildQuery(), user, PagerFilter.getUnlimitedFilter())
+                            .getIssues();
+                } catch (SearchException e) {
                     log.error("Error searching for issues", e);
                 }
             }

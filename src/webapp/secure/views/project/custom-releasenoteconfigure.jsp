@@ -3,7 +3,7 @@
 <%@ taglib uri="sitemesh-page" prefix="page" %>
 <html>
 <head>
-	<title>new configure:<ww:text name="'releasenotes.configure'" /></title>
+	<title><ww:text name="'releasenotes.configure'" /></title>
 </head>
 <body>
 	<page:applyDecorator name="jiraform">
@@ -22,9 +22,9 @@
         </ui:select>
 
         <ui:select label="text('releasenotes.versions')" name="'version'" list="versions" listKey="'key'" listValue="'value'" >
-            <ui:param name="'headerrow'"><ww:text name="'releasenotes.versions'"/></ui:param>
-            <ui:param name="'headervalue'" value="'-1'" />
-            <ui:param name="'mandatory'" value="true"/>
+            <ui:param name="'headerrow'">All Versions</ui:param>
+            <ui:param name="'headervalue'" value="''" />
+            <ui:param name="'mandatory'" value="false"/>
         </ui:select>
 
 		<ui:select label="text('releasenotes.styles')" name="'styleName'" list="styleNames" listKey="'.'" listValue="'.'">

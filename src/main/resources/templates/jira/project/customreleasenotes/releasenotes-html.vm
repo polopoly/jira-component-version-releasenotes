@@ -2,12 +2,21 @@
 ###macro (doubleEncode $html)
 ##        $textUtils.htmlEncode($textUtils.htmlEncode($html))
 ###end
+#if($version)
 <title>$textUtils.htmlEncode($action.getText('release.notes.html.title', $component, $version))</title>
+#else
+<title>$textUtils.htmlEncode($action.getText('custom.release.notes.html.title.no.version', $component))</title>	
+#end
 <body>
 <table>
 <tr>
 <td>
+#if($version)
 <a href="$!requestContext.baseUrl/secure/ConfigureReleaseNoteByComponent.jspa?projectId=${versionObj.projectObject.id}&version=${versionObj.id}&component=${componentId}">$action.getText('releasenotes.configure')</a>
+#else
+<a href="$!requestContext.baseUrl/secure/ConfigureReleaseNoteByComponent.jspa?projectId=${projectId}&component=${componentId}">$action.getText('releasenotes.configure')</a>
+#end
+
 #foreach ($issueType in $issueTypes)
 #if($issueType.issues.size() > 0)
 <h2>$textUtils.htmlEncode($issueType.name)</h2>
@@ -26,12 +35,17 @@
 
 <hr width="100%">
 
-<a name="editarea"><h2>$action.getText('release.notes.edit.copy')</h2></a>
+##<a name="editarea"><h2>$action.getText('release.notes.edit.copy')</h2></a>
 <p>$action.getText('release.notes.description')<br></p>
 
 <textarea rows="40" cols="120" id="editcopy">
 
-#doubleEncode($action.getText('release.notes.heading', $project, $version))
+#if($version)
+#doubleEncode($action.getText('release.notes.heading', $component, $version))
+#else
+#doubleEncode($action.getText('release.notes.heading.no.version', $component))
+#end
+
 #foreach ($issueType in $issueTypes)
     #if($issueType.issues.size() > 0)
 
