@@ -26,12 +26,14 @@ import com.atlassian.sal.api.message.I18nResolver;
 public class ReleaseNoteByComponentAction extends ReleaseNote {
     private static final long serialVersionUID = 1L;
 
-    private CustomReleaseNoteManager customReleaseNoteManager;
     private String component;
-    private VersionManager versionManager;
-    private ProjectManager projectManager;
-    private ProjectComponentManager projectComponentManager;
-    private I18nResolver i18nResolver;
+    private String version;
+
+    private final CustomReleaseNoteManager customReleaseNoteManager;
+    private final VersionManager versionManager;
+    private final ProjectManager projectManager;
+    private final ProjectComponentManager projectComponentManager;
+    private final I18nResolver i18nResolver;
 
     public ReleaseNoteByComponentAction(ProjectManager projectManager, ReleaseNoteManager releaseNoteManager,
             ConstantsManager constantsManager, VersionManager versionManager,
@@ -57,12 +59,16 @@ public class ReleaseNoteByComponentAction extends ReleaseNote {
         return projectComponentManager.findAllForProject(getProjectId());
     }
 
-    public String doConfigureByComponent() throws GenericEntityException {
-        if (getProjectGV() == null || getStyleNames().isEmpty() || StringUtils.isBlank(component)) {
-            return ERROR;
-        } else {
-            return SUCCESS;
-        }
+    @Override
+    public String getVersion() {
+        if (version == null)
+            version = "";
+        return version;
+    }
+
+    @Override
+    public void setVersion(String version) {
+        this.version = version;
     }
 
     @Override
