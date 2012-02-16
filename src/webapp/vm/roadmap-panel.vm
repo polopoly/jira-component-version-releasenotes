@@ -1,0 +1,174 @@
+## replace this file at <jira_webapp>/WEB-INF/classes/templates/plugins/jira/projectpanels
+
+#if ($component)
+    #set ($urlParams = "pid=${project.id}&component=${component.id}")
+    #set ($browseParams = "${project.key}/component/${component.id}")
+#else
+    #set ($urlParams = "pid=${project.id}")
+    #set ($browseParams = "${project.key}")
+#end
+#if ($isPersonal == true)
+    #set ($thisUrl = "$req.contextPath/secure/ViewProfile.jspa?selectedTab=jira.user.profile.panels:up-roadmap-panel&${urlParams}")
+#else
+    #set ($thisUrl = "$req.contextPath/browse/${browseParams}?selectedTab=${reportKey}")
+#end
+#if ($reportKey.contains('roadmap'))
+    #set ($isRoadMap = true)
+    #set ($versionSubset = "roadmap.upcoming.versions")
+#else
+    #set ($isRoadMap = false)
+    #set ($versionSubset = 'changelog.previous.versions')
+#end
+
+#if ($isContentOnly == true && $isExpanding == true)
+    #if ($expandingVersion)
+        #set ($searchResults = $versionHelper.getSearchResultByFixForVersion($expandingVersion))
+        #set ($issues = $versionHelper.getIssuesFromSearchResult($searchResults))
+        #if ($issues.size() > 0)
+            <table cellspacing="0" cellpadding="3" border="0" bgcolor="fffff0">
+                    #foreach ($issue in $issues)
+                        <tr height="20px" bgcolor="white" #if($velocityCount % 2 == 0)class="rowAlternateLightGray"#end>
+                            #issueLineItem ($issue)
+                        </tr>
+                    #end
+            </table>
+            #if ($searchResults.total > $issues.size())
+                <div>$i18n.getText("browseproject.openissues.more.footer", "${issues.size()}", "${searchResults.total}", "<a href='$req.contextPath/secure/IssueNavigator.jspa?reset=true&mode=hide$renderer.getNavigatorUrl($project, $expandingVersion, $component, $isPersonal)'>", "</a>")</div>
+            #end
+        #else
+            <span>$i18n.getText("common.concepts.noissues")</span>
+        #end
+    #end
+#elseif ($isContentOnly == true && $isCollapsing == true)
+    ## Don't need to do anything
+#else
+    #if ($user && $isRoadMap)    	
+		#if($component)
+    		<a class="show-more" href="$req.contextPath/secure/ReleaseNoteByComponent.jspa?projectId=$project.id&component=$component.id" style="padding-right:180px">$i18n.getText("common.concepts.releasenotes")</a>
+	    #end
+        #if ($isPersonal == true)
+            <a class="show-more" href="$req.contextPath/browse/${browseParams}?selectedTab=com.atlassian.jira.plugin.system.project:roadmap-panel">$i18n.getText("roadmap.viewglobal")</a>
+        #else
+            <a class="show-more" id="browse-personal-roadmap" href="$req.contextPath/secure/ViewProfile.jspa?selectedTab=jira.user.profile.panels:up-roadmap-panel&${urlParams}">$i18n.getText("roadmap.viewpersonal")</a>
+        #end
+    #end
+    <div id="primary" class="column full">
+        <div class="content">
+            <div class="module">
+                <div class="mod-content">
+                #if ($isRoadMap)
+                    <p>$i18n.getText("roadmap.desc")</p>
+                #else
+                    <p>$i18n.getText("changelog.desc")</p>
+                #end
+                #if ($isBigList == true)
+                    <ul class="paging">
+                    #if ($showAllVersions == true)
+                        <li>
+                            <a id="paging-upcoming" href="${thisUrl}&allVersions=false">$i18n.getText("$versionSubset", "$versionSubsetSize")</a>
+                        </li>
+                        <li class="last">
+                            <strong>$i18n.getText("roadmap.all.versions")</strong>
+                        </li>
+                    #else
+                        <li>
+                            <strong>$i18n.getText("$versionSubset", "$versionSubsetSize")</strong>
+                        </li>
+                        <li class="last">
+                            <a id="paging-all" href="${thisUrl}&allVersions=true">$i18n.getText('roadmap.all.versions')</a>
+                        </li>
+                    #end
+                    </ul>
+                #end
+
+
+                    <ul class="versionBannerList">
+                        #if (!$versions.empty)
+                            #foreach($version in $versions)
+                                #set ($allCount = $graphingBean.getIssueCountByFixForVersion($version))
+                                #set ($isSelected = $selectedVersions.contains($version.id))
+                                <li id="version-${version.id}" class="#if($isSelected)active#end #if($isRoadMap == false)released#end expando">
+                                    <div class="versionBanner-header" title="$i18n.getText('roadmap.expand.version')">
+                                        #if ($isRoadMap)
+                                            #set ($openCount = $graphingBean.getIssueCountOpenByFixForVersion($version))
+                                            #set ($graphModel = $graphingBean.getIssueSummaryByFixForVersion($version, $component, $openCount, $allCount))
+                                            #set ($resolvedCount = $allCount - $openCount)
+                                            <div class="versionProgress" title="$i18n.getText("roadmap.issuesresolved", "$resolvedCount", "$allCount")">
+                                                <table height="6" width="200" valign="middle" align="right" cellspacing="0" cellpadding="0" border="0">
+                                                    <tr height="6">
+                                                        <td width="80" valign="middle" align="right"><span class="subText">$i18n.getText("common.words.progress"):&nbsp;</span></td>
+                                                        #percentageGraph ($graphModel)
+                                                    </tr>
+                                                    #if ($allCount > 0)
+                                                        <tr><td colspan="3" align="right">
+                                                            &nbsp;
+                                                            <span class="subText">$i18n.getText("roadmap.issues.resolved.linked", "<a href='$req.contextPath/secure/IssueNavigator.jspa?reset=true&mode=hide${graphingBean.getNavigatorUrl($project, $version, $component, $isPersonal, false)}'>", "$resolvedCount", "</a>", "<a href='$req.contextPath/secure/IssueNavigator.jspa?reset=true&mode=hide$renderer.getNavigatorUrl($project, $version, $component, $isPersonal)'>", "$allCount", "</a>")</span>
+                                                    #end
+                                                </table>
+                                            </div>
+                                        #else
+                                            <div class="numberOfIssues">
+                                                #if ($allCount == 0)
+                                                    <span>$i18n.getText("common.concepts.noissues")</span>
+                                                #else
+                                                    <a href='$req.contextPath/secure/IssueNavigator.jspa?reset=true&mode=hide$renderer.getNavigatorUrl($project, $version, $component, $isPersonal)'>$allCount issues</a>
+                                                #end
+                                            </div>
+                                        #end
+                                        #if ($isSelected)
+                                            #set ($collapseOrExpand = 'collapse')
+                                        #else
+                                            #set ($collapseOrExpand = 'expand')
+                                        #end
+                                        <a id="version-expando-${version.id}" class="versionBanner-link" href="${thisUrl}&${collapseOrExpand}Version=${version.id}"></a>
+                                        <a  class="versionBanner-name" title="$i18n.getText('browseversion.title')" href="$req.contextPath/browse/${project.key}/fixforversion/${version.id}" title="$i18n.getText('roadmap.expand.version')">$textutils.htmlEncode($version.name)</a>
+                                        <span class="versionBanner-description">$textutils.htmlEncode($version.description)</span>
+                                        <br/>
+                                        #if ($version.releaseDate)
+											#if($component)
+                                        		<a id="release-notes-${version.id}" class="subText" href="$req.contextPath/secure/ReleaseNoteByComponent.jspa?projectId=$project.id&version=$version.id&component=$component.id" title="$i18n.getText('webfragments.browse.project.operations.item.view.release.notes.name')">$i18n.getText("common.concepts.releasenotes")</a>
+                                        	#end
+                                            <span class="versionBanner-releaseDate">$i18n.getText("version.releasedate"):<span class="date">#versionReleaseDate($versionManager $version)</span></span>
+                                        #else
+                                            #if ($component || $isPersonal == true)
+                                            	#if($component)
+                                        			<a id="release-notes-${version.id}" class="subText" href="$req.contextPath/secure/ReleaseNoteByComponent.jspa?projectId=$project.id&version=$version.id&component=$component.id" title="$i18n.getText('webfragments.browse.project.operations.item.view.release.notes.name')">$i18n.getText("common.concepts.releasenotes")</a>
+                                        		#end
+                                                <span class="versionBanner-releaseDate">$i18n.getText("version.no.releasedate")</span>
+                                            #end
+                                        #end
+                                        #if (!$component && $isPersonal == false)
+                                            <a id="release-notes-${version.id}" class="subText" href="$req.contextPath/secure/ReleaseNote.jspa?projectId=$project.id&version=$version.id" title="$i18n.getText('webfragments.browse.project.operations.item.view.release.notes.name')">$i18n.getText("common.concepts.releasenotes")</a>                                                
+                                        #end
+                                    </div>
+                                    #if($isSelected)
+                                        <div class="versionBanner-content">
+                                            #set ($searchResults = $versionHelper.getSearchResultByFixForVersion($version))
+                                            #set ($issues = $versionHelper.getIssuesFromSearchResult($searchResults))
+                                            #if ($issues.size() > 0)
+                                                <table cellspacing="0" cellpadding="3" border="0" bgcolor="fffff0">
+                                                        #foreach ($issue in $issues)
+                                                            <tr height="20px" bgcolor="white" #if($velocityCount % 2 == 0)class="rowAlternateLightGray"#end>
+                                                                #issueLineItem ($issue)
+                                                            </tr>
+                                                        #end
+                                                </table>
+                                                #if ($searchResults.total > $issues.size())
+                                                    <div>$i18n.getText("browseproject.openissues.more.footer", "${issues.size()}", "${searchResults.total}", "<a href='$req.contextPath/secure/IssueNavigator.jspa?reset=true&mode=hide$renderer.getNavigatorUrl($project, $version, $component, $isPersonal)'>", "</a>")</div>
+                                                #end
+                                            #else
+                                                <span>$i18n.getText("common.concepts.noissues")</span>
+                                            #end
+                                        </div>
+                                    #end
+                                </li>
+                            #end
+                        #else
+                            <span>$i18n.getText("common.filters.noversions")</span>
+                        #end
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+#end
