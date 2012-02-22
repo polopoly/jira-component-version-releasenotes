@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -17,6 +18,7 @@ import org.ofbiz.core.entity.GenericValue;
 import webwork.action.Action;
 import webwork.action.ActionContext;
 
+import com.atex.jira.plugin.action.ReleaseNoteByComponentAction.ComponentVersion;
 import com.atlassian.core.util.map.EasyMap;
 import com.atlassian.jira.bc.project.component.ProjectComponent;
 import com.atlassian.jira.config.ConstantsManager;
@@ -27,6 +29,7 @@ import com.atlassian.jira.issue.search.SearchException;
 import com.atlassian.jira.issue.search.SearchProvider;
 import com.atlassian.jira.jql.builder.JqlQueryBuilder;
 import com.atlassian.jira.project.version.Version;
+import com.atlassian.jira.project.version.VersionManager;
 import com.atlassian.jira.util.NotNull;
 import com.atlassian.jira.util.velocity.DefaultVelocityRequestContextFactory;
 import com.atlassian.jira.web.bean.PagerFilter;
@@ -50,15 +53,18 @@ public class CustomReleaseNoteManager {
     private final ConstantsManager constantsManager;
     private final SearchProvider searchProvider;
     private final CustomFieldManager customFieldManager;
+    private final VersionManager versionManager;
 
     public CustomReleaseNoteManager(final ApplicationProperties applicationProperties,
             final VelocityManager velocityManager, final ConstantsManager constantsManager,
-            final SearchProvider searchProvider, final CustomFieldManager customFieldManager) {
+            final SearchProvider searchProvider, final CustomFieldManager customFieldManager,
+            final VersionManager versionManager) {
         this.applicationProperties = applicationProperties;
         this.velocityManager = velocityManager;
         this.constantsManager = constantsManager;
         this.searchProvider = searchProvider;
         this.customFieldManager = customFieldManager;
+        this.versionManager = versionManager;
     }
 
     public Map getStyles() {
@@ -101,14 +107,14 @@ public class CustomReleaseNoteManager {
      * issues that the user has permission to see.
      * 
      * @param projectId
-     *            TODO
+     * @param componentVersion
      * 
      * @throws IllegalArgumentException
      *             if there is no matching template for this releaseNoteStyleName
      */
     public String getReleaseNote(Action action, String releaseNoteStyleName, Version version, User user,
-            GenericValue project, String component, ProjectComponent projectComponent, String projectId)
-            throws IllegalArgumentException {
+            GenericValue project, String component, ProjectComponent projectComponent, String projectId,
+            ComponentVersion componentVersion) throws IllegalArgumentException {
         try {
             String templateName = (String) getStyles().get(releaseNoteStyleName);
 
@@ -130,8 +136,13 @@ public class CustomReleaseNoteManager {
                 throw new IllegalArgumentException("No styles available for release notes");
             }
 
-            Map templateVariables = getTemplateVariables(action, version, component, user, project, projectComponent,
-                    projectId);
+            Map templateVariables = null;
+            if (version != null)
+                templateVariables = getTemplateVariables(action, version, component, user, project, projectComponent,
+                        projectId);
+            else
+                templateVariables = getTemplateVariablesForAllVersion(action, component, user, project,
+                        projectComponent, projectId, componentVersion);
 
             return velocityManager.getBody(TEMPLATES_DIR, templateName, templateVariables);
         } catch (VelocityException e) {
@@ -153,7 +164,7 @@ public class CustomReleaseNoteManager {
 
     private Map getTemplateVariables(Action action, Version version, String component, User user, GenericValue project,
             ProjectComponent projectComponent, String projectId) {
-        List issueTypes = new ArrayList();
+        List<IssuesByType> issueTypes = new ArrayList<IssuesByType>();
         for (IssueType issueType : constantsManager.getAllIssueTypeObjects()) {
             issueTypes
                     .add(new IssuesByType(issueType, user, version != null ? version.getLong("id") : null, component));
@@ -170,6 +181,46 @@ public class CustomReleaseNoteManager {
             templateVarMap.put("version", version.getName());
             templateVarMap.put("versionObj", version);
         }
+        return templateVarMap;
+    }
+
+    private Map getTemplateVariablesForAllVersion(Action action, String component, User user, GenericValue project,
+            ProjectComponent projectComponent, String projectId, ComponentVersion componentVersion) {
+        Map<String, List<IssuesByType>> versionMaps = new LinkedHashMap<String, List<IssuesByType>>();
+        Collection<IssueType> issueTypes = constantsManager.getAllIssueTypeObjects();
+
+        List<Version> versions = null;
+
+        if (ComponentVersion.Released == componentVersion) {
+            versions = new ArrayList<Version>(versionManager.getVersionsReleased(project, false));
+        } else {
+            versions = new ArrayList<Version>(versionManager.getVersionsUnreleased(project, false));
+        }
+
+        if (!versions.isEmpty()) {
+            Collections.reverse(versions);
+            for (Version version : versions) {
+                int numberOfIssues = 0;
+                List<IssuesByType> issueByTypes = new ArrayList<IssuesByType>();
+                for (IssueType issueType : issueTypes) {
+                    IssuesByType issues = new IssuesByType(issueType, user, version != null ? version.getLong("id")
+                            : null, component);
+                    numberOfIssues += issues.getIssues().size();
+                    issueByTypes.add(issues);
+                }
+
+                if (numberOfIssues > 0)
+                    versionMaps.put(version.getName(), issueByTypes);
+            }
+        }
+        TextUtils textUtils = new TextUtils();
+        Map templateVarMap = EasyMap.build("action", action, "req", ActionContext.getRequest(), "issueTypesByVersion",
+                versionMaps, "appProps", applicationProperties, "project", project.getString("name"), "component",
+                projectComponent.getDescription(), "componentId", component, "projectId", projectId, "textUtils",
+                textUtils, "requestContext",
+                new DefaultVelocityRequestContextFactory(applicationProperties).getJiraVelocityRequestContext());
+        templateVarMap.put("constantsManager", constantsManager);
+        templateVarMap.put("customFieldManager", customFieldManager);
         return templateVarMap;
     }
 

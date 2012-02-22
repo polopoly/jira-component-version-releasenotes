@@ -26,6 +26,10 @@ import com.atlassian.sal.api.message.I18nResolver;
 public class ReleaseNoteByComponentAction extends ReleaseNote {
     private static final long serialVersionUID = 1L;
 
+    public enum ComponentVersion {
+        Released, UnReleased;
+    }
+
     private String component;
     private String version;
 
@@ -117,8 +121,14 @@ public class ReleaseNoteByComponentAction extends ReleaseNote {
 
     @Override
     public String getReleaseNote() {
+        ComponentVersion componentVersion = null;
+        if ("-2".equals(version))
+            componentVersion = ComponentVersion.UnReleased;
+        else if ("-3".equals(version) || StringUtils.isBlank(version))
+            componentVersion = ComponentVersion.Released;
+
         return customReleaseNoteManager.getReleaseNote(this, getStyleName(), getSelectedVersion(), getRemoteUser(),
-                getProjectGV(), component, getProjectComponent(), String.valueOf(getProjectId()));
+                getProjectGV(), component, getProjectComponent(), String.valueOf(getProjectId()), componentVersion);
     }
 
     private ProjectComponent getProjectComponent() {

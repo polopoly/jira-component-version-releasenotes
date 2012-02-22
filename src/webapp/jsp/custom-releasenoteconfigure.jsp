@@ -22,7 +22,7 @@
         </ui:select>
 
         <ui:select label="text('releasenotes.versions')" name="'version'" list="versions" listKey="'key'" listValue="'value'" >
-            <ui:param name="'headerrow'">All Versions</ui:param>
+            <ui:param name="'headerrow'"><ww:text name="'releasenotes.versions'"/></ui:param>
             <ui:param name="'headervalue'" value="''" />
             <ui:param name="'mandatory'" value="false"/>
         </ui:select>

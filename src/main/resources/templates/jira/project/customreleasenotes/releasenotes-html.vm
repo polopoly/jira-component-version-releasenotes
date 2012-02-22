@@ -17,15 +17,33 @@
 <a href="$!requestContext.baseUrl/secure/ConfigureReleaseNoteByComponent.jspa?projectId=${projectId}&component=${componentId}">$action.getText('releasenotes.configure')</a>
 #end
 
-#foreach ($issueType in $issueTypes)
-#if($issueType.issues.size() > 0)
-<h2>$textUtils.htmlEncode($issueType.name)</h2>
-<ul>
-#foreach ($issue in $issueType.issues)
-<li>[<a href='$requestContext.canonicalBaseUrl/browse/$issue.key'>$issue.key</a>] - $textUtils.htmlEncode($issue.summary)</li>
-#end
-</ul>
-#end
+#if($version)
+	#foreach ($issueType in $issueTypes)
+	#if($issueType.issues.size() > 0)
+	<h2>$textUtils.htmlEncode($issueType.name)</h2>
+	<ul>
+	#foreach ($issue in $issueType.issues)
+	<li>[<a href='$requestContext.canonicalBaseUrl/browse/$issue.key'>$issue.key</a>] - $textUtils.htmlEncode($issue.summary)</li>
+	#end
+	</ul>
+	#end
+	#end
+#else
+	#foreach($versionName in $issueTypesByVersion.keySet())
+		<h2>$textUtils.htmlEncode($action.getText('custom.release.notes.version', $versionName))</h2>
+		#set($issueTypes = $issueTypesByVersion.get($versionName))
+		#foreach ($issueType in $issueTypes)
+			#if($issueType.issues.size() > 0)
+			<h3>$textUtils.htmlEncode($issueType.name)</h3>
+			<ul>
+			#foreach ($issue in $issueType.issues)
+			<li>[<a href='$requestContext.canonicalBaseUrl/browse/$issue.key'>$issue.key</a>] - $textUtils.htmlEncode($issue.summary)</li>
+			#end
+			</ul>
+			#end
+		#end
+		<br/>
+	#end
 #end
 </td>
 </tr>
@@ -46,6 +64,7 @@
 #doubleEncode($action.getText('release.notes.heading.no.version', $component))
 #end
 
+#if($version)
 #foreach ($issueType in $issueTypes)
     #if($issueType.issues.size() > 0)
 
@@ -55,6 +74,23 @@
 <li>[<a href='$!requestContext.canonicalBaseUrl/browse/$issue.key'>$issue.key</a>] - #doubleEncode($issue.summary)</li>
 #end
 </ul>
+#end
+#end
+#else
+#foreach($versionName in $issueTypesByVersion.keySet())
+<h2>$textUtils.htmlEncode($action.getText('custom.release.notes.version', $versionName))</h2>
+#set($issueTypes = $issueTypesByVersion.get($versionName))
+#foreach ($issueType in $issueTypes)
+#if($issueType.issues.size() > 0)
+<h3>#doubleEncode($issueType.name)</h3>
+<ul>
+#foreach ($issue in $issueType.issues)
+<li>[<a href='$!requestContext.canonicalBaseUrl/browse/$issue.key'>$issue.key</a>] - #doubleEncode($issue.summary)</li>
+#end
+</ul>
+#end
+#end
+<br/>
 #end
 #end
 </textarea>
